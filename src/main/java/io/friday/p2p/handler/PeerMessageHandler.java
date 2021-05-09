@@ -1,18 +1,17 @@
 package io.friday.p2p.handler;
 
-import io.friday.p2p.P2PEvent;
+import io.friday.p2p.P2PEventHandler;
 import io.friday.p2p.event.PeerMessage;
 import io.friday.transport.entity.Duplicate;
-import io.friday.transport.entity.TransportMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 @ChannelHandler.Sharable
 public class PeerMessageHandler extends SimpleChannelInboundHandler<PeerMessage> implements Duplicate {
-    private P2PEvent p2PEventHandler;
+    private P2PEventHandler p2PEventHandler;
 
-    public PeerMessageHandler(P2PEvent p2PEventHandler) {
+    public PeerMessageHandler(P2PEventHandler p2PEventHandler) {
         this.p2PEventHandler = p2PEventHandler;
     }
 
@@ -30,9 +29,11 @@ public class PeerMessageHandler extends SimpleChannelInboundHandler<PeerMessage>
             case share:
                 handleShareEvent(ctx, msg);
                 break;
-
             case leave:
                 handleLeaveEvent(ctx, msg);
+                break;
+            case nodeFailure:
+                handleNodeFailureEvent(ctx, msg);
                 break;
         }
     }
@@ -50,6 +51,9 @@ public class PeerMessageHandler extends SimpleChannelInboundHandler<PeerMessage>
         p2PEventHandler.handleLeaveMessage(peerMessage, ctx.channel());
     }
 
+    private void handleNodeFailureEvent(ChannelHandlerContext ctx, PeerMessage peerMessage) {
+        p2PEventHandler.handleNodeFailureMessage(peerMessage, ctx.channel());
+    }
     @Override
     public PeerMessageHandler getNewInstance() {
         return new PeerMessageHandler(this.p2PEventHandler);

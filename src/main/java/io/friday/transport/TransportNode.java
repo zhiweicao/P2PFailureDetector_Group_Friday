@@ -13,6 +13,7 @@ import java.util.List;
 
 public interface TransportNode extends LifeCycle, Monitor {
     void send(Address address, Object object);
+    void send(Address address, Object object, ChannelFutureListener[] channelFutureListeners);
     void broadcast(Object object);
     void broadcastExcept(Address address, Object object);
     Channel connect(Address address);

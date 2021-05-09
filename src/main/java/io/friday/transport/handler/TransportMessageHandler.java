@@ -37,17 +37,17 @@ public class TransportMessageHandler extends SimpleChannelInboundHandler<Object>
         transportNode.addConnection(transportMessage.getAddress(), ctx.channel());
     }
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        Channel channel = ctx.channel();
-        System.out.println("[" + channel.remoteAddress() + "]: 在线");
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        Channel channel = ctx.channel();
-        System.out.println("[" + channel.remoteAddress() + "]: 离线");
-    }
+//    @Override
+//    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+//        Channel channel = ctx.channel();
+//        System.out.println("[" + channel.remoteAddress() + "]: 在线");
+//    }
+//
+//    @Override
+//    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+//        Channel channel = ctx.channel();
+//        System.out.println("[" + channel.remoteAddress() + "]: 离线");
+//    }
 
     @Override
     public TransportMessageHandler getNewInstance() {

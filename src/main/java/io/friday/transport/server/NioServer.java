@@ -1,12 +1,14 @@
 package io.friday.transport.server;
 
 import io.friday.transport.entity.LifeCycle;
-import io.friday.transport.handler.MessageCodec;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 
 public class NioServer implements LifeCycle {
     protected DefaultEventLoopGroup defaultEventLoopGroup;
@@ -46,7 +48,8 @@ public class NioServer implements LifeCycle {
                     protected void initChannel(SocketChannel ch) throws Exception {
                         //给pipeline管道设置处理器
                         ch.pipeline().addLast(
-                                new MessageCodec()
+                                new ObjectEncoder(),
+                                new ObjectDecoder(ClassResolvers.cacheDisabled(this.getClass().getClassLoader()))
                         );
                         ch.pipeline().addLast(channelHandlers);
                     }
@@ -65,7 +68,7 @@ public class NioServer implements LifeCycle {
                     }
                 }
             });
-//            channelFuture.channel().closeFuture().sync();
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

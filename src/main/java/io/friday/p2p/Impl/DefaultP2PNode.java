@@ -2,7 +2,7 @@ package io.friday.p2p.Impl;
 
 import io.friday.common.Monitor;
 import io.friday.p2p.Cluster;
-import io.friday.p2p.P2PEvent;
+import io.friday.p2p.P2PEventHandler;
 import io.friday.p2p.P2PNode;
 import io.friday.p2p.entity.FileInfo;
 import io.friday.p2p.entity.FileShareInfo;
@@ -14,6 +14,8 @@ import io.friday.transport.TransportNode;
 import io.friday.transport.entity.Address;
 import io.friday.transport.entity.LifeCycle;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.util.internal.ConcurrentSet;
 
@@ -25,24 +27,27 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class DefaultP2PNode implements P2PNode, P2PEvent, Cluster, LifeCycle, Monitor {
-    private static final int EMPTY_PROCESSED_MESSAGE_PERIOD = 600*1000;
+public class DefaultP2PNode implements P2PNode, P2PEventHandler, Cluster, LifeCycle, Monitor {
+    private static final int EMPTY_PROCESSED_MESSAGE_PERIOD = 600;
+    private static final int INITIAL_DELAY = 10;
 
     private final Address nodeAddress;
     private final HashSet<FileShareInfo> files;
     private final ConcurrentHashMap<Address, HashSet<FileShareInfo>> allFiles;
     private final TransportNode transportNode;
-    private final ReentrantLock processedMessageLock;
-    private ConcurrentSet<PeerMessage> processedMessage;
+    private final DefaultFailureDetector failureDetector;
+    private final ConcurrentSet<PeerMessage> processedMessage;
     private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
+    private final List<Address> failNodeMsgQueue;
 
     public DefaultP2PNode(String host, int port) {
         nodeAddress = new Address(host, port);
         files = new HashSet<>();
         allFiles = new ConcurrentHashMap<>();
-        processedMessageLock = new ReentrantLock();
         processedMessage = new ConcurrentSet<>();
+        failNodeMsgQueue = new ArrayList<>();
         transportNode = new DefaultTransportNode(host, port);
+        failureDetector = new DefaultFailureDetector(this.nodeAddress, transportNode, failNodeMsgQueue);
         ChannelHandler[] p2pChannelHandler = new ChannelHandler[] {
                 new PeerMessageHandler(this)
         };
@@ -81,12 +86,26 @@ public class DefaultP2PNode implements P2PNode, P2PEvent, Cluster, LifeCycle, Mo
     public void join(Address address) {
         Channel channel = transportNode.connect(address);
         PeerMessage peerMessage = new PeerMessage(nodeAddress, PeerMessage.PeerMessageType.join);
-        channel.writeAndFlush(peerMessage);
+        ChannelFutureListener channelFutureListener = future -> {
+            if (future.isSuccess()) {
+                failureDetector.addNeighbours(address);
+            }
+        };
+
+//        transportNode.send(address, peerMessage, new ChannelFutureListener[]{channelFutureListener});
+        ChannelFuture channelFuture = channel.writeAndFlush(peerMessage);
+        channelFuture.addListener(channelFutureListener);
+        try {
+            channelFuture.sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+//        transportNode.send(address, peerMessage, new ChannelFutureListener[]{channelFutureListener});
     }
 
     @Override
     public void leave() {
-        PeerMessage peerMessage = new PeerMessage(nodeAddress, PeerMessage.PeerMessageType.join);
+        PeerMessage peerMessage = new PeerMessage(nodeAddress, PeerMessage.PeerMessageType.leave);
         transportNode.broadcast(peerMessage);
     }
 
@@ -97,8 +116,10 @@ public class DefaultP2PNode implements P2PNode, P2PEvent, Cluster, LifeCycle, Mo
 
     @Override
     public void start() {
-        scheduledThreadPoolExecutor.scheduleAtFixedRate(new ScheduledCleaner(), 10,EMPTY_PROCESSED_MESSAGE_PERIOD, TimeUnit.SECONDS);
+        scheduledThreadPoolExecutor.scheduleAtFixedRate(new ScheduledCleaner(), INITIAL_DELAY, EMPTY_PROCESSED_MESSAGE_PERIOD, TimeUnit.SECONDS);
         transportNode.start();
+        failureDetector.start();
+        new Thread(new FailNodeConsumer(failNodeMsgQueue)).start();
     }
 
     @Override
@@ -122,6 +143,7 @@ public class DefaultP2PNode implements P2PNode, P2PEvent, Cluster, LifeCycle, Mo
         FileShareParam fileShareParam = new FileShareParam(fileShareInfoList);
         PeerMessage joinResponse = new PeerMessage(fileShareParam, PeerMessage.PeerMessageType.joinResponse);
         transportNode.send(fromAddress, joinResponse);
+        failureDetector.addNeighbours(fromAddress);
     }
 
     @Override
@@ -136,21 +158,25 @@ public class DefaultP2PNode implements P2PNode, P2PEvent, Cluster, LifeCycle, Mo
         assert (peerMessage.getMessage() instanceof Address);
 
         Address leaveAddress = (Address) peerMessage.getMessage();
-        transportNode.disconnect(leaveAddress);
-        for (FileShareInfo fileShareInfo : allFiles.get(leaveAddress)) {
-            files.remove(fileShareInfo);
-        }
+        removeAddressFiles(leaveAddress);
+        gossip(peerMessage);
+    }
 
-        allFiles.remove(leaveAddress);
+    @Override
+    public void handleNodeFailureMessage(PeerMessage peerMessage, Channel channel) {
+        assert (peerMessage.getMessage() instanceof Address);
+
+        Address failedAddress = (Address) peerMessage.getMessage();
+        removeAddressFiles(failedAddress);
         gossip(peerMessage);
     }
 
     @Override
     public boolean hasHandled(PeerMessage peerMessage) {
         boolean isContained;
-        processedMessageLock.lock();
-        isContained = processedMessage.contains(peerMessage);
-        processedMessageLock.unlock();
+        synchronized (processedMessage) {
+            isContained = processedMessage.contains(peerMessage);
+        }
         return isContained;
     }
 
@@ -174,28 +200,76 @@ public class DefaultP2PNode implements P2PNode, P2PEvent, Cluster, LifeCycle, Mo
     }
 
     private void gossip(PeerMessage peerMessage) {
-        processedMessageLock.lock();
-        processedMessage.add(peerMessage);
-        processedMessageLock.unlock();
+        synchronized (processedMessage) {
+            processedMessage.add(peerMessage);
+        }
         transportNode.broadcast(peerMessage);
     }
 
+    private void processNodeFailure(Address address) {
+        System.out.println("Handle failed Node: " + address);
+        PeerMessage msg = new PeerMessage(address, PeerMessage.PeerMessageType.nodeFailure);
+        transportNode.disconnect(address);
+        removeAddressFiles(address);
+        gossip(msg);
+    }
 
+    private void removeAddressFiles(Address address) {
+        for (FileShareInfo fileShareInfo : allFiles.get(address)) {
+            files.remove(fileShareInfo);
+        }
+
+        allFiles.remove(address);
+    }
     @Override
     public void list() {
         System.out.println("---- transportNode list ----");
         transportNode.list();
-        System.out.println("---- Node file ----");
+        System.out.println("---- shared file ----");
         files.forEach(System.out::println);
+        System.out.println("---- FailureDetector alive neighbours list ----");
+        failureDetector.getAliveNeighbours().forEach(System.out::println);
+        System.out.println("---- FailureDetector suspected list ----");
+        failureDetector.getSuspectedNeighbours().forEach(System.out::println);
+        System.out.println("---- FailureDetector failed neighbours list ----");
+        failureDetector.getFailedNeighbours().forEach(System.out::println);
 
     }
 
     class ScheduledCleaner implements Runnable {
         @Override
         public void run() {
-            processedMessageLock.lock();
-            processedMessage = new ConcurrentSet<>();
-            processedMessageLock.unlock();
+            synchronized (processedMessage) {
+                processedMessage.clear();
+            }
+        }
+    }
+
+    class FailNodeConsumer implements Runnable {
+        private final List<Address> eventQueue;
+
+        public FailNodeConsumer(List<Address> eventQueue) {
+            this.eventQueue = eventQueue;
+        }
+        @Override
+        public void run() {
+            try {
+                while(eventQueue.isEmpty()) {
+                    synchronized (eventQueue) {
+                        while(eventQueue.isEmpty()) {
+                            eventQueue.wait();
+
+                        }
+                        for (Address address : eventQueue) {
+                            processNodeFailure(address);
+                        }
+                        eventQueue.clear();
+                    }
+                }
+            } catch (InterruptedException interruptedException) {
+                System.out.println("线程崩溃："+interruptedException.getMessage());
+                interruptedException.printStackTrace();
+            }
         }
     }
 }

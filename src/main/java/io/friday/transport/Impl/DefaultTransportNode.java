@@ -4,7 +4,6 @@ import io.friday.transport.TransportNode;
 import io.friday.transport.client.NioClient;
 import io.friday.transport.entity.Address;
 import io.friday.transport.entity.TransportMessage;
-import io.friday.transport.handler.MessageCodec;
 import io.friday.transport.handler.TransportMessageHandler;
 import io.friday.transport.server.NioServer;
 import io.netty.channel.*;
@@ -62,6 +61,14 @@ public class DefaultTransportNode implements TransportNode {
     }
 
     @Override
+    public void send(Address address, Object object, ChannelFutureListener[] channelFutureListeners) {
+        Channel channel = destChannel.get(address);
+        ChannelFuture channelFuture = channel.writeAndFlush(object);
+        Arrays.stream(channelFutureListeners).forEach(channelFuture::addListener);
+    }
+
+
+    @Override
     public void broadcast(Object object) {
         List<Address> allDest = getAllConnection();
         allDest.forEach(e -> send(e, object));
@@ -84,14 +91,19 @@ public class DefaultTransportNode implements TransportNode {
         NioClient nioClient = new NioClient(address, channelHandlers);
         peerClients.add(nioClient);
         Channel channel = nioClient.connect();
-        nioClient.send(new TransportMessage(getOwnAddress(), TransportMessage.TransportType.connect));
-        nioClient.addListenerOnChannel(new ChannelFutureListener() {
+        ChannelFuture channelFuture = channel.writeAndFlush(new TransportMessage(getOwnAddress(), TransportMessage.TransportType.connect));
+        channelFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 destChannel.put(address, future.channel());
             }
         });
 
+//        try {
+//            channelFuture.sync();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
         Arrays.stream(channelFutureListener).forEach(nioClient::addListenerOnChannel);
         return channel;
     }
@@ -116,7 +128,6 @@ public class DefaultTransportNode implements TransportNode {
 
     @Override
     public List<Address> getAllConnection() {
-        this.channelHandlers = ArrayUtils.addAll(this.channelHandlers ,channelHandlers);
         return new ArrayList<>(destChannel.keySet());
     }
 

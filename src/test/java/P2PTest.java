@@ -1,9 +1,6 @@
 import io.friday.p2p.Impl.DefaultP2PNode;
 import io.friday.p2p.entity.FileInfo;
-import io.friday.transport.Impl.DefaultTransportNode;
-import io.friday.transport.TransportNode;
 import io.friday.transport.entity.Address;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;

@@ -21,12 +21,17 @@ public class PeerMessage implements Serializable {
         this.type = peerMessageType;
     }
 
-
+    public PeerMessage(PeerMessageType peerMessageType) {
+        this.uuid = UUID.randomUUID();
+        this.type = peerMessageType;
+    }
 
     public enum PeerMessageType {
         share,
         join,
         joinResponse,
         leave,
+        heartbeat,
+        nodeFailure
     }
 }

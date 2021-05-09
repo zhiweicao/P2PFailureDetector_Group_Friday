@@ -1,13 +1,14 @@
 package io.friday.transport.client;
 
 import io.friday.transport.entity.Address;
-import io.friday.transport.handler.MessageCodec;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.apache.commons.lang3.ArrayUtils;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 
 public class NioClient {
     private final Bootstrap bootstrap;
@@ -30,9 +31,11 @@ public class NioClient {
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
+
                         //添加客户端通道的处理器
                         ch.pipeline().addLast(
-                                new MessageCodec()
+                            new ObjectEncoder(),
+                            new ObjectDecoder(ClassResolvers.cacheDisabled(this.getClass().getClassLoader()))
                         );
                         ch.pipeline().addLast(channelHandlers);
                     }
