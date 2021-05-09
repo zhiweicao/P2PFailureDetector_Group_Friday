@@ -215,6 +215,7 @@ public class DefaultP2PNode implements P2PNode, P2PEventHandler, Cluster, LifeCy
     }
 
     private void removeAddressFiles(Address address) {
+        if (!allFiles.containsKey(address)) return;
         for (FileShareInfo fileShareInfo : allFiles.get(address)) {
             files.remove(fileShareInfo);
         }

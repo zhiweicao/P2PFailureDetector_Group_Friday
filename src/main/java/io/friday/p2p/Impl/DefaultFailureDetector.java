@@ -1,25 +1,18 @@
 package io.friday.p2p.Impl;
 
 import io.friday.p2p.FailureDetector;
-import io.friday.p2p.event.FailureDetectorEvent;
 import io.friday.p2p.event.PeerMessage;
 import io.friday.transport.TransportNode;
 import io.friday.transport.entity.Address;
 import io.friday.transport.entity.LifeCycle;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.util.internal.ConcurrentSet;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class DefaultFailureDetector implements FailureDetector, LifeCycle {
     private static final int HEARTBEAT_PERIOD = 10*1000;

@@ -1,8 +1,6 @@
 package io.friday.p2p;
 
-import io.friday.p2p.event.FailureDetectorEvent;
 import io.friday.transport.entity.Address;
-import io.netty.channel.Channel;
 
 import java.util.List;
 
