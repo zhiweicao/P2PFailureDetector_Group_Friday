@@ -9,5 +9,7 @@ public interface P2PEventHandler {
     void handleJoinResponseMessage(PeerMessage peerMessage, Channel channel);
     void handleLeaveMessage(PeerMessage peerMessage, Channel channel);
     void handleNodeFailureMessage(PeerMessage peerMessage, Channel channel);
+    void handleDelegateMessage(PeerMessage peerMessage, Channel channel);
+    void handleDelegateResponseMessage(PeerMessage peerMessage, Channel channel);
     boolean hasHandled(PeerMessage peerMessage);
 }

@@ -32,6 +32,9 @@ public class PeerMessage implements Serializable {
         joinResponse,
         leave,
         heartbeat,
-        nodeFailure
+        nodeFailure,
+        delegatedPing,
+        delegate,
+        delegateResponse
     }
 }

@@ -38,6 +38,15 @@ public class PeerMessageHandler extends SimpleChannelInboundHandler<PeerMessage>
             case heartbeat:
                 //无需处理
                 break;
+            case delegatedPing:
+                //无需处理
+                break;
+            case delegate:
+                p2PEventHandler.handleDelegateMessage(msg, ctx.channel());
+                break;
+            case delegateResponse:
+                p2PEventHandler.handleDelegateResponseMessage(msg, ctx.channel());
+                break;
         }
     }
     private void handleJoinEvent(ChannelHandlerContext ctx, PeerMessage peerMessage) {

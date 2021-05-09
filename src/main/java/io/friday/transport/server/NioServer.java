@@ -27,7 +27,10 @@ public class NioServer implements LifeCycle {
         bootstrap = new ServerBootstrap();
         //设置两个线程组boosGroup和workerGroup
     }
-
+    public NioServer(int port, ChannelHandler[] channelHandlers) {
+        this(port);
+        this.channelHandlers = channelHandlers;
+    }
     public void setChannelHandlers(ChannelHandler[] channelHandlers) {
         this.channelHandlers = channelHandlers;
     }

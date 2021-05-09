@@ -10,7 +10,7 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
-public class NioClient {
+public class SwimClient {
     protected final Bootstrap bootstrap;
     protected final NioEventLoopGroup eventExecutors;
     protected ChannelFuture channelFuture;
@@ -18,7 +18,7 @@ public class NioClient {
     protected final String destHost;
     protected final int destPort;
 
-    public NioClient(String destHost, int destPort, ChannelHandler[] channelHandlers) {
+    public SwimClient(String destHost, int destPort, ChannelHandler[] channelHandlers) {
         this.destHost = destHost;
         this.destPort = destPort;
 
@@ -34,15 +34,15 @@ public class NioClient {
 
                         //添加客户端通道的处理器
                         ch.pipeline().addLast(
-                            new ObjectEncoder(),
-                            new ObjectDecoder(ClassResolvers.cacheDisabled(this.getClass().getClassLoader()))
+                                new ObjectEncoder(),
+                                new ObjectDecoder(ClassResolvers.cacheDisabled(this.getClass().getClassLoader()))
                         );
                         ch.pipeline().addLast(channelHandlers);
                     }
                 });
     }
 
-    public NioClient(Address address, ChannelHandler[] channelHandlers) {
+    public SwimClient(Address address, ChannelHandler[] channelHandlers) {
         this(address.getHost(), address.getPort(), channelHandlers);
     }
 
@@ -51,20 +51,16 @@ public class NioClient {
         channelFuture.channel().writeAndFlush(msg);
     }
 
-    public Channel connect() {
-        try {
-            channelFuture = bootstrap.connect(destHost, destPort).sync();
-            return channelFuture.channel();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public void addListenerOnChannel(ChannelFutureListener channelFutureListener) {
         channelFuture.addListener(channelFutureListener);
     }
     public void close() {
         eventExecutors.shutdownGracefully();
+    }
+
+    public ChannelFuture connect() {
+        return this.bootstrap.connect(destHost, destPort);
+
     }
 }

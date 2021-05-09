@@ -46,7 +46,9 @@ public class DefaultFailureDetector implements FailureDetector, LifeCycle {
 
     @Override
     public synchronized void addNeighbours(Address address) {
-        neighbours.add(address);
+        synchronized (neighbours) {
+            neighbours.add(address);
+        }
         timestampMap.put(address, System.currentTimeMillis());
     }
 
@@ -142,7 +144,9 @@ public class DefaultFailureDetector implements FailureDetector, LifeCycle {
                             System.out.println(neighbour + "被添加到失败列表");
                             suspectedNeighbours.remove(neighbour);
                             failedNeighbours.add(neighbour);
-                            neighbours.remove(neighbour);
+                            synchronized (neighbours) {
+                                neighbours.remove(neighbour);
+                            }
                             synchronized (failNodeMsgQueue) {
                                 System.out.println("添加失败节点："+ neighbour + "到处理序列");
                                 failNodeMsgQueue.add(neighbour);
@@ -154,8 +158,6 @@ public class DefaultFailureDetector implements FailureDetector, LifeCycle {
                     }
                 }
             }
-
         }
     }
-
 }

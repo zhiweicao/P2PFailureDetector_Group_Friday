@@ -172,6 +172,16 @@ public class DefaultP2PNode implements P2PNode, P2PEventHandler, Cluster, LifeCy
     }
 
     @Override
+    public void handleDelegateMessage(PeerMessage peerMessage, Channel channel) {
+
+    }
+
+    @Override
+    public void handleDelegateResponseMessage(PeerMessage peerMessage, Channel channel) {
+
+    }
+
+    @Override
     public boolean hasHandled(PeerMessage peerMessage) {
         boolean isContained;
         synchronized (processedMessage) {
