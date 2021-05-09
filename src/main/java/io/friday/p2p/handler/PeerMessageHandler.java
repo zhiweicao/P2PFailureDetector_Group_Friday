@@ -35,6 +35,9 @@ public class PeerMessageHandler extends SimpleChannelInboundHandler<PeerMessage>
             case nodeFailure:
                 handleNodeFailureEvent(ctx, msg);
                 break;
+            case heartbeat:
+                //无需处理
+                break;
         }
     }
     private void handleJoinEvent(ChannelHandlerContext ctx, PeerMessage peerMessage) {
