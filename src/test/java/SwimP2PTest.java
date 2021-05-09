@@ -22,7 +22,7 @@ public class SwimP2PTest {
                 String line = input.readLine();
                 String command = line.split(" ")[0];
                 String detail = null;
-                System.out.println("命令: " + line);
+                System.out.println("Command: " + line);
                 switch (command) {
                     case "join":
                         detail = line.split(" ")[1];
@@ -45,7 +45,7 @@ public class SwimP2PTest {
                         p2PNode.addRefuseAddress(new Address("localhost", refusePort));
                         break;
                     default:
-                        System.out.println("命令不支持： " + command);
+                        System.out.println("Command not support： " + command);
 
                 }
 

@@ -17,7 +17,7 @@ public class PeerMessageHandler extends SimpleChannelInboundHandler<PeerMessage>
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, PeerMessage msg) throws Exception {
-        System.out.println("收到信息: " + msg);
+        System.out.println("Receive message: " + msg);
         if (p2PEventHandler.hasHandled(msg)) return;
         switch (msg.getType()) {
             case join:

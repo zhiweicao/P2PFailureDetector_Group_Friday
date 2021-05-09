@@ -247,9 +247,7 @@ public class SwimP2PNode implements P2PNode, P2PEventHandler, Cluster, LifeCycle
         synchronized (neighbours) {
             neighbours.remove(address);
         }
-        synchronized (suspectedNeighbours) {
-            suspectedNeighbours.clear();
-        }
+
         gossip(msg);
     }
 
@@ -320,13 +318,17 @@ public class SwimP2PNode implements P2PNode, P2PEventHandler, Cluster, LifeCycle
     class FailureNodeCleaner implements Runnable {
         @Override
         public void run() {
-            if (!suspectedNeighbours.isEmpty() && System.currentTimeMillis() - lastDetect.get() > SUSPECTED_PERIOD) {
-                for (Address address : suspectedNeighbours) {
-                    processNodeFailure(address);
+            try {
+                if (!suspectedNeighbours.isEmpty() && System.currentTimeMillis() - lastDetect.get() > SUSPECTED_PERIOD) {
+                    synchronized (suspectedNeighbours) {
+                        for (Address address : suspectedNeighbours) {
+                            processNodeFailure(address);
+                        }
+                        suspectedNeighbours.clear();
+                    }
                 }
-                synchronized (suspectedNeighbours) {
-                    suspectedNeighbours.clear();
-                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }

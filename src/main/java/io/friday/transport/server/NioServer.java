@@ -57,7 +57,7 @@ public class NioServer implements LifeCycle {
                         ch.pipeline().addLast(channelHandlers);
                     }
                 });//给workerGroup的EventLoop对应的管道设置处理器
-        System.out.println("服务器配置完成...");
+        System.out.println("server set up succeed...");
     }
 
     public void start() {
@@ -67,7 +67,7 @@ public class NioServer implements LifeCycle {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (channelFuture.isSuccess()) {
-                        System.out.println(String.format("成功绑定%s端口，服务器开始接受请求。", port));
+                        System.out.println(String.format("binding %s succeed，server start to receive request.", port));
                     }
                 }
             });
